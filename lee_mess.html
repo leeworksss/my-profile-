@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="tl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lee Messenger</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --primary-color: #0084ff;
+      --bg-color: #f0f2f5;
+      --card-bg: #ffffff;
+      --text-color: #050505;
+      --text-sub: #65676b;
+      --border-color: #e4e6eb;
+      --msg-in: #e4e6eb;
+      --msg-out: #0084ff;
+      --msg-out-text: #ffffff;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; }
+    body { background: var(--bg-color); height: 100vh; display: flex; justify-content: center; align-items: center; }
+
+    /* AUTH SCREEN */
+    .auth-container { width: 100%; max-width: 400px; padding: 20px; }
+    .auth-card { background: var(--card-bg); padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center; }
+    .auth-card h1 { color: var(--primary-color); margin-bottom: 5px; }
+    .auth-card p { color: var(--text-sub); font-size: 14px; margin-bottom: 20px; }
+    .input-group { text-align: left; margin-bottom: 15px; }
+    .input-group label { display: block; font-size: 12px; font-weight: bold; margin-bottom: 5px; color: var(--text-sub); }
+    .input-group input { width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; outline: none; font-size: 14px; }
+    .input-group input:focus { border-color: var(--primary-color); }
+    .btn-submit { width: 100%; padding: 12px; background: var(--primary-color); color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 15px; cursor: pointer; margin-top: 10px; }
+    .btn-submit:hover { opacity: 0.9; }
+    .toggle-auth { margin-top: 15px; font-size: 13px; color: var(--text-sub); }
+    .toggle-auth span { color: var(--primary-color); cursor: pointer; font-weight: bold; }
+
+    /* MESSENGER CONTAINER */
+    .app-container { display: none; width: 100%; height: 100vh; background: var(--card-bg); }
+    @media (min-width: 768px) {
+      .app-container { width: 90%; height: 90vh; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); overflow: hidden; }
+    }
+    .messenger { display: flex; width: 100%; height: 100%; }
+
+    /* SIDEBAR */
+    .sidebar { width: 340px; border-right: 1px solid var(--border-color); display: flex; flex-direction: column; background: #fff; }
+    .sidebar-header { padding: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); }
+    .sidebar-header h2 { font-size: 20px; color: var(--primary-color); }
+    .header-actions { display: flex; gap: 10px; }
+    .icon-btn { background: #f0f2f5; border: none; width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-color); }
+    .icon-btn:hover { background: #e4e6eb; }
+    .logout-btn { color: #e41e3f; }
+
+    .contacts-list { flex: 1; overflow-y: auto; }
+    .contact-item { display: flex; align-items: center; padding: 12px 15px; cursor: pointer; transition: background 0.2s; border-bottom: 1px solid #f9f9f9; }
+    .contact-item:hover, .contact-item.active { background: #e7f3ff; }
+    .avatar { width: 45px; height: 45px; border-radius: 50%; background: #ccc; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; margin-right: 12px; position: relative; flex-shrink: 0; }
+    .online-badge { width: 12px; height: 12px; background: #31a24c; border-radius: 50%; position: absolute; bottom: 0; right: 0; border: 2px solid white; }
+    .contact-info { flex: 1; overflow: hidden; }
+    .contact-name { font-weight: bold; font-size: 14px; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; }
+    .contact-msg { font-size: 12px; color: var(--text-sub); text-overflow: ellipsis; white-space: nowrap; overflow: hidden; }
+    .group-tag { font-size: 10px; background: #e4e6eb; padding: 2px 6px; border-radius: 10px; margin-left: 5px; }
+
+    /* CHAT AREA */
+    .chat-area { flex: 1; display: flex; flex-direction: column; background: #fff; }
+    .chat-header { padding: 12px 20px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 10px; }
+    .chat-body { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; background: #fbfbfb; }
+    .message { max-width: 65%; padding: 10px 14px; border-radius: 18px; font-size: 14px; line-height: 1.4; word-wrap: break-word; }
+    .message.received { align-self: flex-start; background: var(--msg-in); color: var(--text-color); }
+    .message.sent { align-self: flex-end; background: var(--msg-out); color: var(--msg-out-text); }
+    .message-sender { font-size: 11px; font-weight: bold; margin-bottom: 3px; opacity: 0.8; }
+
+    .chat-footer { padding: 12px; border-top: 1px solid var(--border-color); display: flex; align-items: center; gap: 10px; }
+    .chat-footer input { flex: 1; padding: 10px 15px; border: 1px solid var(--border-color); border-radius: 20px; outline: none; }
+    .send-btn { background: none; border: none; color: var(--primary-color); font-size: 20px; cursor: pointer; padding: 5px 10px; }
+
+    /* MODAL STYLES */
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
+    .modal-content { background: white; padding: 20px; border-radius: 12px; width: 90%; max-width: 400px; }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+    .modal-header h3 { font-size: 18px; }
+    .close-btn { cursor: pointer; font-size: 20px; color: var(--text-sub); }
+    .modal-body { display: flex; flex-direction: column; gap: 12px; }
+
+    /* MOBILE ADJUSTMENT */
+    @media (max-width: 767px) {
+      .sidebar { width: 100%; }
+      .chat-area { display: none; }
+      .app-container.chat-active .sidebar { display: none; }
+      .app-container.chat-active .chat-area { display: flex; }
+      .back-btn { display: inline-block !important; font-size: 18px; cursor: pointer; }
+    }
+    .back-btn { display: none; }
+  </style>
+</head>
+<body>
+
+  <!-- AUTH SCREEN -->
+  <div class="auth-container" id="authScreen">
+    <div class="auth-card">
+      <h1 id="authTitle">Lee Messenger</h1>
+      <p id="authSubtitle">Mag-login para makipag-chat</p>
+      
+      <form id="authForm">
+        <div class="input-group">
+          <label for="username">Username</label>
+          <input type="text" id="username" placeholder="Enter username" required>
+        </div>
+        <div class="input-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" placeholder="Enter password" required>
+        </div>
+        <button type="submit" class="btn-submit" id="btnSubmit">Login</button>
+      </form>
+
+      <div class="toggle-auth">
+        <span id="toggleText">Wala pang account? </span>
+        <span id="toggleLink">Mag-Register</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN APP SCREEN -->
+  <div class="app-container" id="appScreen">
+    <div class="messenger">
+      
+      <!-- SIDEBAR -->
+      <div class="sidebar">
+        <div class="sidebar-header">
+          <h2>Lee Messenger</h2>
+          <div class="header-actions">
+            <button class="icon-btn" id="openAddFriendBtn" title="Add Friend"><i class="fa-solid fa-user-plus"></i></button>
+            <button class="icon-btn" id="openCreateGroupBtn" title="Create Group Chat"><i class="fa-solid fa-users"></i></button>
+            <button class="icon-btn logout-btn" id="logoutBtn" title="Logout"><i class="fa-solid fa-right-from-bracket"></i></button>
+          </div>
+        </div>
+        <div class="contacts-list" id="contactsList">
+          <!-- Dynamic contacts will appear here -->
+        </div>
+      </div>
+
+      <!-- CHAT AREA -->
+      <div class="chat-area">
+        <div class="chat-header">
+          <i class="fa-solid fa-arrow-left back-btn" id="backBtn"></i>
+          <div class="avatar" id="currentAvatar" style="background:#0084ff;">L</div>
+          <div>
+            <div class="contact-name" id="currentName">Pumili ng ka-chat</div>
+            <div style="font-size: 11px; color: #31a24c;" id="currentStatus">Active Now</div>
+          </div>
+        </div>
+
+        <div class="chat-body" id="chatBody">
+          <!-- Messages will load here -->
+        </div>
+
+        <div class="chat-footer">
+          <input type="text" id="messageInput" placeholder="Type a message...">
+          <button class="send-btn" id="sendBtn">
+            <i class="fa-solid fa-paper-plane"></i>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MODAL: ADD FRIEND -->
+  <div class="modal" id="addFriendModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Mag-Add ng Kaibigan</h3>
+        <span class="close-btn" onclick="closeModal('addFriendModal')">&times;</span>
+      </div>
+      <div class="modal-body">
+        <div class="input-group">
+          <label>Username ng Kaibigan</label>
+          <input type="text" id="friendUsernameInput" placeholder="Enter username...">
+        </div>
+        <button class="btn-submit" id="addFriendSubmit">Add Friend</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: CREATE GROUP CHAT -->
+  <div class="modal" id="createGroupModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Gumawa ng Group Chat</h3>
+        <span class="close-btn" onclick="closeModal('createGroupModal')">&times;</span>
+      </div>
+      <div class="modal-body">
+        <div class="input-group">
+          <label>Pangalan ng GC</label>
+          <input type="text" id="groupNameInput" placeholder="Enter Group Name...">
+        </div>
+        <button class="btn-submit" id="createGroupSubmit">Create Group</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // State Management
+    let currentUser = null;
+    let isRegistering = false;
+    let activeChat = null; // Can be a friend or a group
+
+    // Local Storage Initializers
+    let users = JSON.parse(localStorage.getItem('lee_users')) || [
+      { username: 'admin', password: '123' },
+      { username: 'maria', password: '123' },
+      { username: 'juan', password: '123' }
+    ];
+
+    let chats = JSON.parse(localStorage.getItem('lee_chats')) || [
+      { id: 'gc_1', name: 'Mga Tropa (GC)', isGroup: true, members: ['admin', 'maria', 'juan'], color: '#9c27b0' },
+      { id: 'user_maria', name: 'maria', isGroup: false, members: ['admin', 'maria'], color: '#e91e63' },
+      { id: 'user_juan', name: 'juan', isGroup: false, members: ['admin', 'juan'], color: '#4caf50' }
+    ];
+
+    let messages = JSON.parse(localStorage.getItem('lee_messages')) || {
+      'gc_1': [{ sender: 'maria', text: 'Welcome sa GC!' }],
+      'user_maria': [{ sender: 'maria', text: 'Kumusta ka?' }],
+      'user_juan': [{ sender: 'juan', text: 'Kita tayo mamaya!' }]
+    };
+
+    function saveData() {
+      localStorage.setItem('lee_users', JSON.stringify(users));
+      localStorage.setItem('lee_chats', JSON.stringify(chats));
+      localStorage.setItem('lee_messages', JSON.stringify(messages));
+    }
+
+    // DOM Elements
+    const authScreen = document.getElementById('authScreen');
+    const appScreen = document.getElementById('appScreen');
+    const authForm = document.getElementById('authForm');
+    const authTitle = document.getElementById('authTitle');
+    const authSubtitle = document.getElementById('authSubtitle');
+    const btnSubmit = document.getElementById('btnSubmit');
+    const toggleLink = document.getElementById('toggleLink');
+    const logoutBtn = document.getElementById('logoutBtn');
+
+    const contactsList = document.getElementById('contactsList');
+    const chatBody = document.getElementById('chatBody');
+    const messageInput = document.getElementById('messageInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const currentName = document.getElementById('currentName');
+    const currentAvatar = document.getElementById('currentAvatar');
+    const backBtn = document.getElementById('backBtn');
+
+    // Toggle Authentication
+    toggleLink.addEventListener('click', () => {
+      isRegistering = !isRegistering;
+      if (isRegistering) {
+        authTitle.innerText = "Create Account";
+        authSubtitle.innerText = "Gumawa ng bagong account";
+        btnSubmit.innerText = "Register";
+        toggleLink.innerText = "Mag-Login";
+      } else {
+        authTitle.innerText = "Lee Messenger";
+        authSubtitle.innerText = "Mag-login para makipag-chat";
+        btnSubmit.innerText = "Login";
+        toggleLink.innerText = "Mag-Register";
+      }
+    });
+
+    // Form Submit (Login / Register)
+    authForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const userVal = document.getElementById('username').value.trim().toLowerCase();
+      const passVal = document.getElementById('password').value.trim();
+
+      if (isRegistering) {
+        if (users.find(u => u.username === userVal)) {
+          alert('May katulad nang Username!');
+          return;
+        }
+        users.push({ username: userVal, password: passVal });
+        saveData();
+        alert('Account registered! Pwede ka nang mag-login.');
+        toggleLink.click();
+      } else {
+        const found = users.find(u => u.username === userVal && u.password === passVal);
+        if (found) {
+          currentUser = userVal;
+          authScreen.style.display = 'none';
+          appScreen.style.display = 'block';
+          initApp();
+        } else {
+          alert('Maling Username o Password!');
+        }
+      }
+    });
+
+    // Logout
+    logoutBtn.addEventListener('click', () => {
+      currentUser = null;
+      appScreen.style.display = 'none';
+      authScreen.style.display = 'block';
+      document.getElementById('username').value = '';
+      document.getElementById('password').value = '';
+    });
+
+    // Init App
+    function initApp() {
+      renderContacts();
+      const userChats = getUserChats();
+      if (userChats.length > 0) {
+        selectChat(userChats[0]);
+      }
+    }
+
+    function getUserChats() {
+      return chats.filter(c => c.members.includes(currentUser));
+    }
+
+    // Render Contacts / Chats
+    function renderContacts() {
+      contactsList.innerHTML = '';
+      const userChats = getUserChats();
+
+      userChats.forEach(chat => {
+        const item = document.createElement('div');
+        item.className = `contact-item ${activeChat && activeChat.id === chat.id ? 'active' : ''}`;
+        
+        const chatName = chat.isGroup ? chat.name : (chat.members.find(m => m !== currentUser) || currentUser);
+        const avatarLetter = chatName.charAt(0).toUpperCase();
+
+        item.innerHTML = `
+          <div class="avatar" style="background: ${chat.color || '#0084ff'}">
+            ${avatarLetter}
+            <div class="online-badge"></div>
+          </div>
+          <div class="contact-info">
+            <div class="contact-name">${chatName} ${chat.isGroup ? '<span class="group-tag">GC</span>' : ''}</div>
+            <div class="contact-msg">${getLastMessage(chat.id)}</div>
+          </div>
+        `;
+
+        item.addEventListener('click', () => {
+          selectChat(chat);
+          appScreen.classList.add('chat-active');
+        });
+        contactsList.appendChild(item);
+      });
+    }
+
+    function getLastMessage(chatId) {
+      const chatMsgs = messages[chatId];
+      if (!chatMsgs || chatMsgs.length === 0) return 'No messages yet';
+      const last = chatMsgs[chatMsgs.length - 1];
+      return `${last.sender}: ${last.text}`;
+    }
+
+    // Select Chat
+    function selectChat(chat) {
+      activeChat = chat;
+      const chatName = chat.isGroup ? chat.name : (chat.members.find(m => m !== currentUser) || currentUser);
+      currentName.innerText = chatName;
+      currentAvatar.innerText = chatName.charAt(0).toUpperCase();
+      currentAvatar.style.background = chat.color || '#0084ff';
+      renderContacts();
+      renderMessages();
+    }
+
+    // Render Messages
+    function renderMessages() {
+      chatBody.innerHTML = '';
+      if (!activeChat) return;
+
+      const chatMsgs = messages[activeChat.id] || [];
+      chatMsgs.forEach(msg => {
+        const msgDiv = document.createElement('div');
+        const isSent = msg.sender === currentUser;
+        msgDiv.className = `message ${isSent ? 'sent' : 'received'}`;
+        
+        let content = '';
+        if (!isSent && activeChat.isGroup) {
+          content += `<div class="message-sender">${msg.sender}</div>`;
+        }
+        content += msg.text;
+        msgDiv.innerHTML = content;
+
+        chatBody.appendChild(msgDiv);
+      });
+      chatBody.scrollTop = chatBody.scrollHeight;
+    }
+
+    // Send Message
+    function sendMessage() {
+      const text = messageInput.value.trim();
+      if (!text || !activeChat) return;
+
+      if (!messages[activeChat.id]) messages[activeChat.id] = [];
+
+      messages[activeChat.id].push({ sender: currentUser, text });
+      saveData();
+
+      messageInput.value = '';
+      renderMessages();
+      renderContacts();
+    }
+
+    sendBtn.addEventListener('click', sendMessage);
+    messageInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
+
+    // Modals Handling
+    document.getElementById('openAddFriendBtn').addEventListener('click', () => openModal('addFriendModal'));
+    document.getElementById('openCreateGroupBtn').addEventListener('click', () => openModal('createGroupModal'));
+
+    function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+    // Add Friend Logic
+    document.getElementById('addFriendSubmit').addEventListener('click', () => {
+      const targetUser = document.getElementById('friendUsernameInput').value.trim().toLowerCase();
+      if (!targetUser) return;
+
+      if (targetUser === currentUser) {
+        alert('Hindi mo pwedeng i-add ang sarili mo!');
+        return;
+      }
+
+      const exists = users.find(u => u.username === targetUser);
+      if (!exists) {
+        alert('Hindi mahanap ang user na iyon!');
+        return;
+      }
+
+      // Check if chat already exists
+      const existingChat = chats.find(c => !c.isGroup && c.members.includes(currentUser) && c.members.includes(targetUser));
+      if (existingChat) {
+        alert('Kaibigan mo na ang user na ito!');
+      } else {
+        const newChat = {
+          id: 'user_' + Date.now(),
+          isGroup: false,
+          members: [currentUser, targetUser],
+          color: '#' + Math.floor(Math.random()*16777215).toString(16)
+        };
+        chats.push(newChat);
+        messages[newChat.id] = [{ sender: 'System', text: 'Nagsimula na ang inyong chat!' }];
+        saveData();
+        renderContacts();
+        selectChat(newChat);
+        alert(`Naidagdag na si ${targetUser}!`);
+      }
+
+      document.getElementById('friendUsernameInput').value = '';
+      closeModal('addFriendModal');
+    });
+
+    // Create Group Logic
+    document.getElementById('createGroupSubmit').addEventListener('click', () => {
+      const groupName = document.getElementById('groupNameInput').value.trim();
+      if (!groupName) return;
+
+      const newGC = {
+        id: 'gc_' + Date.now(),
+        name: groupName,
+        isGroup: true,
+        members: [currentUser],
+        color: '#' + Math.floor(Math.random()*16777215).toString(16)
+      };
+
+      chats.push(newGC);
+      messages[newGC.id] = [{ sender: 'System', text: `Ginawa ang group chat na "${groupName}"` }];
+      saveData();
+      renderContacts();
+      selectChat(newGC);
+
+      document.getElementById('groupNameInput').value = '';
+      closeModal('createGroupModal');
+      alert(`Gumawa ng Group Chat: ${groupName}`);
+    });
+
+    // Mobile Back Button
+    backBtn.addEventListener('click', () => {
+      appScreen.classList.remove('chat-active');
+    });
+  </script>
+</body>
+</html>
